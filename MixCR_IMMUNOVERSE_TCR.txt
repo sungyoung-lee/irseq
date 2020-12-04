@@ -1,0 +1,32 @@
+#!/bin/bash
+
+MIXCR=/bio/scratch/sosug32/Tools/mixcr-2.1.9/mixcr
+
+### Align raw sequences to reference sequences of (V,D,J) of TCR gene:
+$MIXCR align \
+-s hsa  -c ALL \
+-OdParameters.absoluteMinScore=30 \
+-OvParameters.parameters.minAlignmentLength=0 \
+-OallowPartialAlignments=true \
+-r $sample"_alignmentReport.log" \
+$dir/$input1 $dir/$input2 $outdir/$sample"_alignments.vdjca"
+
+
+### Two rounds of contig assembly
+$MIXCR assemblePartial $outdir/$sample"_alignments.vdjca" $outdir/$sample"_alignments_rescued_1.vdjca"
+$MIXCR assemblePartial $outdir/$sample"_alignments_rescued_1.vdjca" $outdir/$sample"_alignments_rescued_2.vdjca"
+
+
+### Assemble clonotype:
+$MIXCR assemble -r $outdir/$sample"_assembleReport.log" \
+-i $sample"_assemble_index" \
+-OaddReadsCountOnClustering=true \
+-ObadQualityThreshold=10 \
+$outdir/$sample"_alignments_rescued_2.vdjca" $outdir/$sample"_clones.clns"
+
+
+### Export "clone.clns" to human readable
+$MIXCR exportClones --chains TRA,TRB,TRG,TRD -o -t $outdir/$sample"_clones.clns" $outdir/$sample"_clones_TRA_TRD.txt"
+
+
+$MIXCR exportAlignmentsPretty --skip 1000 --limit 10 -t --verbose $outdir/$sample"_alignments_rescued_2.vdjca"  $outdir/$sample"_alignment.txt"
